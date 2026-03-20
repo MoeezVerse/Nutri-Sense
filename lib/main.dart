@@ -4,9 +4,13 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/main_shell.dart';
 import 'services/food_analysis_service.dart';
 import 'services/google_places_service.dart';
-import 'screens/onboarding_screen.dart';
+import 'services/opencage_geocoder_service.dart';
 import 'services/profile_storage.dart';
+import 'services/auth_storage.dart';
+import 'models/auth_session.dart';
 import 'widgets/skeleton_shimmer.dart';
+import 'screens/authentication_screen.dart';
+import 'screens/further_details_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +23,14 @@ void main() async {
     final placesKey = dotenv.maybeGet('GOOGLE_PLACES_API_KEY');
     if (placesKey != null && placesKey.isNotEmpty) {
       GooglePlacesService.apiKey = placesKey;
+    }
+    final ocKey = dotenv.maybeGet('OPENCAGE_API_KEY');
+    if (ocKey != null && ocKey.isNotEmpty) {
+      OpenCageGeocoderService.apiKey = ocKey;
+    }
+    final ocBias = dotenv.maybeGet('OPENCAGE_GEOCODE_BIAS');
+    if (ocBias != null && ocBias.trim().isNotEmpty) {
+      OpenCageGeocoderService.geocodeBias = ocBias.trim();
     }
   } catch (_) {
     // .env missing or invalid; app still runs, scan will show "add API key" message
@@ -116,7 +128,10 @@ class NutriSenseApp extends StatelessWidget {
   }
 }
 
-/// Shows onboarding if no profile, otherwise main app with bottom nav.
+/// Auth + profile gate:
+/// - No auth: show Sign In / Sign Up
+/// - Auth but no profile: show Further Details
+/// - Auth + profile: show main app
 class _AppStart extends StatefulWidget {
   const _AppStart();
 
@@ -126,17 +141,32 @@ class _AppStart extends StatefulWidget {
 
 class _AppStartState extends State<_AppStart> {
   bool _loading = true;
+  bool _hasAuth = false;
   bool _hasProfile = false;
+  AuthSession? _session;
 
   @override
   void initState() {
     super.initState();
-    _checkProfile();
+    _checkAuthAndProfile();
   }
 
-  Future<void> _checkProfile() async {
+  Future<void> _handleSignedOut() async {
+    await AuthStorage.clearSession();
+    if (!mounted) return;
+    setState(() {
+      _hasAuth = false;
+      _hasProfile = false;
+      _session = null;
+    });
+  }
+
+  Future<void> _checkAuthAndProfile() async {
+    final session = await AuthStorage.loadSession();
     final p = await ProfileStorage.load();
     setState(() {
+      _session = session;
+      _hasAuth = session != null;
       _hasProfile = p != null;
       _loading = false;
     });
@@ -165,13 +195,27 @@ class _AppStartState extends State<_AppStart> {
         ),
       );
     }
-    if (_hasProfile) {
-      return MainShell(
-        onSignedOut: () => setState(() => _hasProfile = false),
+
+    if (_hasAuth) {
+      if (_hasProfile) {
+        return MainShell(
+          onSignedOut: () {
+            _handleSignedOut();
+          },
+        );
+      }
+      if (_session == null) {
+        // Safety: treat missing session as logged out.
+        return AuthenticationScreen(onAuthenticated: _checkAuthAndProfile);
+      }
+      return FurtherDetailsScreen(
+        session: _session!,
+        onComplete: _checkAuthAndProfile,
       );
     }
-    return OnboardingScreen(
-      onComplete: () => setState(() => _hasProfile = true),
+
+    return AuthenticationScreen(
+      onAuthenticated: _checkAuthAndProfile,
     );
   }
 }

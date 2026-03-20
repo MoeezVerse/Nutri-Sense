@@ -52,7 +52,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _signOut() async {
-    await ProfileStorage.clear();
     if (!mounted) return;
     widget.onProfileUpdated();
     widget.onSignedOut();

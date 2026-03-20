@@ -131,6 +131,11 @@ class _NavItem extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
+        // Prevent hover/focus overlays from creating a grey block highlight on desktop.
+        hoverColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        splashColor: Colors.transparent,
         child: SizedBox(
           width: double.infinity,
           height: double.infinity,
