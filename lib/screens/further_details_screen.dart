@@ -18,6 +18,7 @@ class FurtherDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return OnboardingScreen(
+      accountEmail: session.email,
       existingProfile: UserProfile(
         name: session.name,
         city: '',

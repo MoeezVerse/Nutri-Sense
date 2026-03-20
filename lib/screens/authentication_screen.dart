@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../services/auth_storage.dart';
+import '../services/profile_storage.dart';
 import '../widgets/pressable_scale.dart';
 import 'forgot_password_screen.dart';
 
@@ -70,6 +71,8 @@ class _AuthenticationScreenState extends State<AuthenticationScreen> {
           email: _emailController.text,
           password: _passwordController.text,
         );
+        // New account must not inherit a legacy device-wide profile from another user.
+        await ProfileStorage.clearLegacyGlobalProfile();
       }
 
       if (!mounted) return;

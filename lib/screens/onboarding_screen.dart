@@ -8,10 +8,13 @@ class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({
     super.key,
     this.existingProfile,
+    required this.accountEmail,
     required this.onComplete,
   });
 
   final UserProfile? existingProfile;
+  /// Email of the signed-in account — profile is stored per user.
+  final String accountEmail;
   final VoidCallback onComplete;
 
   @override
@@ -98,7 +101,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ? null
           : _medicalController.text.trim(),
     );
-    await ProfileStorage.save(profile);
+    final email = widget.accountEmail.trim();
+    if (email.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Session error: missing account email.')),
+        );
+      }
+      return;
+    }
+    await ProfileStorage.save(profile, accountEmail: email);
     if (mounted) widget.onComplete();
   }
 

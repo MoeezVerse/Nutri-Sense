@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/user_profile.dart';
+import '../services/auth_storage.dart';
 import '../services/profile_storage.dart';
 import 'onboarding_screen.dart';
 import '../widgets/pressable_scale.dart';
@@ -39,10 +40,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _editProfile() async {
+    final session = await AuthStorage.loadSession();
+    if (session == null || !mounted) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (context) => OnboardingScreen(
           existingProfile: _profile,
+          accountEmail: session.email,
           onComplete: () => Navigator.of(context).pop(),
         ),
       ),
@@ -121,9 +125,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 24),
                       FilledButton.icon(
                         onPressed: () async {
+                          final session = await AuthStorage.loadSession();
+                          if (session == null || !mounted) return;
                           await Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (context) => OnboardingScreen(
+                                accountEmail: session.email,
                                 onComplete: () {
                                   Navigator.of(context).pop();
                                   _loadProfile();
